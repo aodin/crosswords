@@ -30,3 +30,7 @@
   left: 3px;
   top: 1px;
 }
+
+.highlighted-clue {
+  background-color: #3a7afd88;
+}

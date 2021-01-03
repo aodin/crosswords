@@ -5,122 +5,14 @@ import './index.css';
 
 import example from './02.json';
 
-// document.addEventListener('keydown', function(event) {
-//   switch (event.key) {
-//     case 'Left':
-//     case 'ArrowLeft':
-//       break;
-//     case 'Up':
-//     case 'ArrowUp':
-//       break;
-//     case 'Right':
-//     case 'ArrowRight':
-//       break;
-//     case 'Down':
-//     case 'ArrowDown':
-//       break;
-//     default:
-//       return;
-//   }
-//   event.preventDefault();
-// });
-
-class Square extends React.Component {
-  constructor(props) {
-    super(props);
-    this.rows = this.props.rows || 15;
-    this.cols = this.props.cols || 15;
-    this.state = {
-      active: [0, 0],
-    }
-    this.move = this.move.bind(this);
-    this.handleClick = this.handleClick.bind(this);
-  }
-
-  move(event) {
-    let [x, y] = this.state.active;
-    switch (event.key) {
-      case 'Up':
-      case 'ArrowUp':
-        if (y > 0) y--;
-        this.setState({'active': [x, y]});
-        break;
-      case 'Down':
-      case 'ArrowDown':
-        if (y < (this.rows - 1)) y++;
-        this.setState({'active': [x, y]});
-        break;
-      case 'Right':
-      case 'ArrowRight':
-        if (x < (this.cols - 1)) x++;
-        this.setState({'active': [x, y]});
-        break;
-      case 'Left':
-      case 'ArrowLeft':
-        if (x > 0) x--;
-        this.setState({'active': [x, y]});
-        break;
-      default:
-        return;
-    }
-    event.preventDefault();
-  }
-
-  componentDidMount() {
-    document.addEventListener('keydown', this.move, false);
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener('keydown', this.move, false);
-  }
-
-  handleClick(x, y) {
-    // Move active to focused input
-    this.setState({'active': [x, y]});
-  }
-
-  render() {
-    const [activeX, activeY] = this.state.active;
-
-    let body = [];
-    for (let y = 0; y < this.rows; y++) {
-      let cells = [];
-      for (let x = 0; x < this.cols; x++) {
-        let isActive = (x === activeX && y === activeY);
-        cells.push(<Cell
-          x={x}
-          y={y}
-          isActive={isActive}
-          onClick={() => this.handleClick(x, y)}
-        />);
-      }
-      body.push(<tr>{cells}</tr>)
-    }
-
-    return (
-      <table className="table">
-        <tbody>
-          {body}
-        </tbody>
-      </table>
-    );
-  }
-}
-
 
 class Clue extends React.Component {
-  constructor(props) {
-    super(props);
-    this.handleClick = this.handleClick.bind(this);
-  }
-
-  handleClick(event) {
-    console.log('Clue!', this.props.text);
-  }
-
   render() {
     return (
-      <li onClick={this.handleClick}>{this.props.text}</li>
+      <li
+        onClick={this.props.onClick}
+        className={this.props.highlight ? 'highlighted-clue' : ''}
+      >{this.props.text}</li>
     );
   }
 }
@@ -128,12 +20,6 @@ class Clue extends React.Component {
 class Cell extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
-      gridnum: props.gridnum ? props.gridnum : false,
-      value: '',
-      actual: props.value,
-      isDisabled: props.value === '.',
-    };
     this.input = React.createRef();
     this.handleChange = this.handleChange.bind(this);
   }
@@ -154,75 +40,184 @@ class Cell extends React.Component {
     }
   }
 
-  handleChange(x, y) {
-    this.setState({value: this.input.current.value.toUpperCase()});
-    // TODO If rebus, this event will depend on current value length
+  handleChange() {
+    // Move active to focused input
+    let value = this.input.current.value.toUpperCase();
+    this.props.liftValue(this.props.x, this.props.y, value);
   }
 
   render() {
     return (
       <td className="cell">
-        {this.state.gridnum &&
-        <div className="gridnum">{this.state.gridnum}</div>
+        {this.props.gridnum &&
+        <div className="gridnum">{this.props.gridnum}</div>
         }
         <input
           ref={this.input}
           type="text"
           className="form-control"
-          value={this.state.value}
+          value={this.props.value}
           onChange={this.handleChange}
           onClick={this.props.onClick}
-          disabled={this.state.isDisabled}
+          disabled={this.props.isDisabled}
+          autoComplete="off"
         />
       </td>
     );
   }
 }
 
-class Row extends React.Component {
-  render() {
-    let data = [];
-    for (let i = 0; i < this.props.values.length; i++) {
-      let value = this.props.values[i];
-      let gridnum = this.props.gridnums[i];
-      data.push({key: i.toString(), value: value, gridnum: gridnum});
-    }
-    const cells = data.map(item =>
-      <Cell key={item.key} value={item.value} gridnum={item.gridnum} />
-    );
-    return (
-      <tr>
-        {cells}
-      </tr>
-    );
-  }
-}
-
 class Crossword extends React.Component {
-  render() {
-    const colsize = this.props.data.size.cols;
-    let rows = [];
-    for (let i = 0; i < this.props.data.size.rows; i++) {
-      // Get the cell values and gridnums
-      let start = i * colsize;
-      let end = (i+1) * colsize;
-      let values = this.props.data.grid.slice(start, end);
-      let gridnums = this.props.data.gridnums.slice(start, end);
-      rows.push(<Row key={i.toString()} values={values} gridnums={gridnums} />);
+  constructor(props) {
+    super(props);
+    this.rows = this.props.data.size.rows || 15;
+    this.cols = this.props.data.size.cols || 15;
+    this.state = {
+      active: [0, 0],
+      clue: ['across', 0],
+      values: Array(this.props.data.grid.length).fill(''),
     }
-    const across = this.props.data.clues.across.map((clue, index) =>
-      <Clue key={index.toString()} text={clue} />
-    );
-    const down = this.props.data.clues.down.map((clue, index) =>
-      <Clue key={index.toString()} text={clue} />
-    );
+    this.captureKeys = this.captureKeys.bind(this);
+    this.handleClick = this.handleClick.bind(this);
+    this.handleCellChange = this.handleCellChange.bind(this);
+    this.activeClue = this.activeClue.bind(this);
+  }
+
+  captureKeys(event) {
+    let [x, y] = this.state.active;
+    switch (event.key) {
+      case 'Up':
+      case 'ArrowUp':
+        if (y > 0) y--;
+        break;
+      case 'Down':
+      case 'ArrowDown':
+        if (y < (this.rows - 1)) y++;
+        break;
+      case 'Right':
+      case 'ArrowRight':
+        if (x < (this.cols - 1)) x++;
+        break;
+      case 'Left':
+      case 'ArrowLeft':
+        if (x > 0) x--;
+        break;
+      case 'Backspace':
+        let index = (y * this.cols) + x;
+        const values = this.state.values.slice();
+        if (values[index]) {
+          // Delete the contents of the current cell
+          values[index] = '';
+          this.setState({'values': values});
+        } else {
+          // Delete the contents of the previous cell
+          const [orientation, ] = this.state.clue;
+          if (orientation === 'across') {
+            if (x > 0) x--;
+          } else {
+            if (y > 0) y--;
+          }
+          let index = (y * this.cols) + x;
+          values[index] = '';
+          this.setState({'values': values});
+        }
+        break;
+      default:
+        return;
+    }
+    // TODO Skip disabled cells
+    this.setState({'active': [x, y]});
+    event.preventDefault();
+  }
+
+  componentDidMount() {
+    document.addEventListener('keydown', this.captureKeys, false);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this.captureKeys, false);
+  }
+
+  handleClick(x, y) {
+    // Move active to focused input
+    this.setState({'active': [x, y]});
+  }
+
+  activeClue(orientation, index, ) {
+    this.setState({'clue': [orientation, index]});
+  }
+
+  handleCellChange(x, y, value) {
+    const values = this.state.values.slice();
+    const index = (y * this.cols) + x;
+    values[index] = value;
+    this.setState({'values': values});
+
+    // If a value was added, move active cell
+    // TODO Depends on rebus
+    if (value.length === 0) return;
+    const [orientation, ] = this.state.clue;
+
+    // TODO Skip disabled cells
+    if (orientation === 'across') {
+      if (x < (this.cols - 1)) x++;
+    } else {
+      if (y < (this.rows - 1)) y++;
+    }
+    this.setState({'active': [x, y]});
+  }
+
+  render() {
+    const [activeX, activeY] = this.state.active;
+    let body = [];
+    for (let y = 0; y < this.rows; y++) {
+      let cells = [];
+      for (let x = 0; x < this.cols; x++) {
+        let index = (y * this.cols) + x;
+        let value = this.state.values[index];
+        let actual = this.props.data.grid[index];
+        let gridnum = this.props.data.gridnums[index];
+
+        cells.push(<Cell
+          key={index.toString()}
+          x={x}
+          y={y}
+          value={value}
+          isDisabled={actual === '.'}
+          gridnum={gridnum ? gridnum : false}
+          isActive={x === activeX && y === activeY}
+          onClick={() => this.handleClick(x, y)}
+          liftValue={this.handleCellChange}
+        />);
+      }
+      body.push(<tr key={y.toString()}>{cells}</tr>)
+    }
+    const [orientation, activeClue] = this.state.clue;
+    const across = this.props.data.clues.across.map((clue, index) => {
+      // TODO Determine clue gridnum
+      return <Clue
+        key={index.toString()}
+        text={clue}
+        onClick={() => this.activeClue('across', index)}
+        highlight={orientation === 'across' && index === activeClue}
+      />;
+    });
+    const down = this.props.data.clues.down.map((clue, index) => {
+      // TODO Determine clue gridnum
+      return <Clue
+        key={index.toString()}
+        text={clue}
+        onClick={() => this.activeClue('down', index)}
+        highlight={orientation === 'down' && index === activeClue}
+      />;
+    });
     return (
       <div>
         <h3>{this.props.data.title}</h3>
         <h6>{this.props.data.date}</h6>
-        <table className="table table-sm">
+        <table className="">
           <tbody>
-            {rows}
+            {body}
           </tbody>
         </table>
         <div className="mt-4">
@@ -240,10 +235,7 @@ class Crossword extends React.Component {
   }
 }
 
-
-
 ReactDOM.render(
-  // <Crossword data={example} />,
-  <Square />,
+  <Crossword data={example} />,
   document.getElementById('root')
 );
