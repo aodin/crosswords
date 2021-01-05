@@ -23,14 +23,14 @@
   background-color: #111;
 }
 
+.highlight {
+  background-color: #3a7afd88;
+}
+
 .gridnum {
   z-index: -1000;
   font-size: 50%;
   position: absolute;
   left: 3px;
   top: 1px;
-}
-
-.highlighted-clue {
-  background-color: #3a7afd88;
 }

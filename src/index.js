@@ -11,7 +11,7 @@ class Clue extends React.Component {
     return (
       <li
         onClick={this.props.onClick}
-        className={this.props.highlight ? 'highlighted-clue' : ''}
+        className={this.props.highlight ? 'highlight' : ''}
       >{this.props.text}</li>
     );
   }
@@ -48,7 +48,7 @@ class Cell extends React.Component {
 
   render() {
     return (
-      <td className="cell">
+      <td className={`cell ${this.props.highlight ? 'highlight' : ''}`}>
         {this.props.gridnum &&
         <div className="gridnum">{this.props.gridnum}</div>
         }
@@ -84,23 +84,32 @@ class Crossword extends React.Component {
   }
 
   captureKeys(event) {
+    let [orientation, activeClue] = this.state.clue;
     let [x, y] = this.state.active;
     switch (event.key) {
       case 'Up':
       case 'ArrowUp':
         if (y > 0) y--;
+        orientation = 'down';
+        // TODO change clue?
         break;
       case 'Down':
       case 'ArrowDown':
         if (y < (this.rows - 1)) y++;
+        orientation = 'down';
+        // TODO change clue?
         break;
       case 'Right':
       case 'ArrowRight':
         if (x < (this.cols - 1)) x++;
+        orientation = 'across';
+        // TODO change clue?
         break;
       case 'Left':
       case 'ArrowLeft':
         if (x > 0) x--;
+        orientation = 'across';
+        // TODO change clue?
         break;
       case 'Backspace':
         let index = (y * this.cols) + x;
@@ -127,6 +136,7 @@ class Crossword extends React.Component {
     }
     // TODO Skip disabled cells
     this.setState({'active': [x, y]});
+    this.setState({'clue': [orientation, activeClue]});
     event.preventDefault();
   }
 
@@ -168,6 +178,7 @@ class Crossword extends React.Component {
   }
 
   render() {
+    const [orientation, activeClue] = this.state.clue;
     const [activeX, activeY] = this.state.active;
     let body = [];
     for (let y = 0; y < this.rows; y++) {
@@ -178,6 +189,15 @@ class Crossword extends React.Component {
         let actual = this.props.data.grid[index];
         let gridnum = this.props.data.gridnums[index];
 
+        // TODO For now, highlight the whole row or column
+        let highlight = false;
+        if (orientation === 'across' && activeY === y) {
+          highlight = true;
+        }
+        if (orientation === 'down' && activeX === x) {
+          highlight = true;
+        }
+
         cells.push(<Cell
           key={index.toString()}
           x={x}
@@ -185,6 +205,7 @@ class Crossword extends React.Component {
           value={value}
           isDisabled={actual === '.'}
           gridnum={gridnum ? gridnum : false}
+          highlight={highlight}
           isActive={x === activeX && y === activeY}
           onClick={() => this.handleClick(x, y)}
           liftValue={this.handleCellChange}
@@ -192,7 +213,7 @@ class Crossword extends React.Component {
       }
       body.push(<tr key={y.toString()}>{cells}</tr>)
     }
-    const [orientation, activeClue] = this.state.clue;
+
     const across = this.props.data.clues.across.map((clue, index) => {
       // TODO Determine clue gridnum
       return <Clue
