@@ -158,8 +158,29 @@ class Crossword extends React.Component {
     this.setState({'active': [x, y]});
   }
 
-  activeClue(orientation, index, ) {
+  activeClue(orientation, index) {
+    // The clue's gridnum is contained in the clue text
+    let clue;
+    if (orientation === 'across') {
+      clue = this.props.data.clues.across[index];
+    } else if (orientation === 'down') {
+      clue = this.props.data.clues.down[index];
+    }
+    const [value, ] = clue.split('.', 2);
+    const number = parseInt(value, 10);
+
+    // Use the gridnums to determine which cell should be active
+    let i = 0;
+    while (i < this.props.data.gridnums.length) {
+      if (this.props.data.gridnums[i] === number) {
+        break;
+      }
+      i++;
+    }
+    const x = i % this.cols;
+    const y = Math.floor((i+1)/this.cols);
     this.setState({'clue': [orientation, index]});
+    this.setState({'active': [x, y]});
   }
 
   handleCellChange(x, y, value) {
