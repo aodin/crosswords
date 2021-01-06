@@ -1,3 +1,5 @@
+// eslint-disable-next-line no-unused-vars
+import { Tooltip, Popover } from 'bootstrap';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './custom.scss';
@@ -81,6 +83,9 @@ class Crossword extends React.Component {
     this.handleClick = this.handleClick.bind(this);
     this.handleCellChange = this.handleCellChange.bind(this);
     this.activeClue = this.activeClue.bind(this);
+    this.solveLetter = this.solveLetter.bind(this);
+    this.solveClue = this.solveClue.bind(this);
+    this.solvePuzzle = this.solvePuzzle.bind(this);
   }
 
   captureKeys(event) {
@@ -177,6 +182,20 @@ class Crossword extends React.Component {
     this.setState({'active': [x, y]});
   }
 
+  solveLetter() {
+    const [x, y] = this.state.active;
+    const values = this.state.values.slice();
+    const index = (y * this.cols) + x;
+    values[index] = this.props.data.grid[index];
+    this.setState({'values': values});
+  }
+
+  solveClue() {}
+
+  solvePuzzle() {
+    this.setState({'values': this.props.data.grid});
+  }
+
   render() {
     const [orientation, activeClue] = this.state.clue;
     const [activeX, activeY] = this.state.active;
@@ -236,7 +255,17 @@ class Crossword extends React.Component {
       <div>
         <h3>{this.props.data.title}</h3>
         <h6>{this.props.data.date}</h6>
-        <table className="">
+        <div className="dropdown">
+        <button className="btn btn-sm btn-light dropdown-toggle" type="button" id="solve" data-bs-toggle="dropdown" aria-expanded="false">
+          Solve
+        </button>
+        <ul className="dropdown-menu" aria-labelledby="solve">
+          <li><button className="btn btn-link dropdown-item" onClick={this.solveLetter}>Letter</button></li>
+          <li><button className="btn btn-link dropdown-item" onClick={this.solveClue}>Clue</button></li>
+          <li><button className="btn btn-link dropdown-item" onClick={this.solvePuzzle}>Puzzle</button></li>
+        </ul>
+      </div>
+        <table className="mt-3">
           <tbody>
             {body}
           </tbody>
