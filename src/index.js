@@ -50,7 +50,7 @@ class Cell extends React.Component {
 
   render() {
     return (
-      <td className={`cell ${this.props.highlight ? 'highlight' : ''}`}>
+      <td className={`cell ${this.props.highlight ? 'highlight' : ''} ${this.props.incorrect ? 'incorrect' : ''}`}>
         {this.props.gridnum &&
         <div className="gridnum">{this.props.gridnum}</div>
         }
@@ -78,14 +78,22 @@ class Crossword extends React.Component {
       active: [0, 0],
       clue: ['across', 0],
       values: Array(this.props.data.grid.length).fill(''),
+      incorrect: Array(this.props.data.grid.length).fill(false),
     }
     this.captureKeys = this.captureKeys.bind(this);
     this.handleClick = this.handleClick.bind(this);
     this.handleCellChange = this.handleCellChange.bind(this);
     this.activeClue = this.activeClue.bind(this);
+
+    // Solves
     this.solveLetter = this.solveLetter.bind(this);
     this.solveClue = this.solveClue.bind(this);
     this.solvePuzzle = this.solvePuzzle.bind(this);
+
+    // Check
+    this.checkLetter = this.checkLetter.bind(this);
+    this.checkClue = this.checkClue.bind(this);
+    this.checkPuzzle = this.checkPuzzle.bind(this);
   }
 
   captureKeys(event) {
@@ -117,6 +125,7 @@ class Crossword extends React.Component {
         // TODO change clue?
         break;
       case 'Backspace':
+        // TODO Use handleCellChange for deletions
         let index = (y * this.cols) + x;
         const values = this.state.values.slice();
         if (values[index]) {
@@ -189,6 +198,11 @@ class Crossword extends React.Component {
     values[index] = value;
     this.setState({'values': values});
 
+    // Clear any incorrect state
+    const incorrect = this.state.incorrect.slice();
+    incorrect[index] = false;
+    this.setState({'incorrect': incorrect});
+
     // If a value was added, move active cell
     // TODO Depends on rebus
     if (value.length === 0) return;
@@ -217,6 +231,22 @@ class Crossword extends React.Component {
     this.setState({'values': this.props.data.grid});
   }
 
+  checkLetter() {}
+
+  checkClue() {}
+
+  checkPuzzle() {
+    // Reset the incorrect state
+    let incorrect = Array(this.props.data.grid.length).fill(false);
+    for (let i = 0; i < this.state.values.length; i++) {
+      // Only check cells with a value
+      let value = this.state.values[i];
+      if (!value) continue;
+      incorrect[i] = (value !== this.props.data.grid[i]);
+    }
+    this.setState({'incorrect': incorrect});
+  }
+
   render() {
     const [orientation, activeClue] = this.state.clue;
     const [activeX, activeY] = this.state.active;
@@ -228,6 +258,7 @@ class Crossword extends React.Component {
         let value = this.state.values[index];
         let actual = this.props.data.grid[index];
         let gridnum = this.props.data.gridnums[index];
+        let incorrect = this.state.incorrect[index];
 
         // TODO For now, highlight the whole row or column
         let highlight = false;
@@ -247,6 +278,7 @@ class Crossword extends React.Component {
           gridnum={gridnum ? gridnum : false}
           highlight={highlight}
           isActive={x === activeX && y === activeY}
+          incorrect={incorrect}
           onClick={() => this.handleClick(x, y)}
           liftValue={this.handleCellChange}
         />);
@@ -273,26 +305,38 @@ class Crossword extends React.Component {
       />;
     });
     return (
-      <div>
-        <h3>{this.props.data.title}</h3>
-        <h6>{this.props.data.date}</h6>
-        <div className="dropdown">
-        <button className="btn btn-sm btn-light dropdown-toggle" type="button" id="solve" data-bs-toggle="dropdown" aria-expanded="false">
-          Solve
-        </button>
-        <ul className="dropdown-menu" aria-labelledby="solve">
-          <li><button className="btn btn-link dropdown-item" onClick={this.solveLetter}>Letter</button></li>
-          <li><button className="btn btn-link dropdown-item" onClick={this.solveClue}>Clue</button></li>
-          <li><button className="btn btn-link dropdown-item" onClick={this.solvePuzzle}>Puzzle</button></li>
-        </ul>
-      </div>
-        <table className="mt-3">
-          <tbody>
-            {body}
-          </tbody>
-        </table>
-        <div className="mt-4">
-          <h4 className="font-weight-bold">Across</h4>
+      <div className="row mt-3">
+        <div className="col-12">
+          <h3>{this.props.data.title}</h3>
+          <h6>{this.props.data.date}</h6>
+          <div>
+            <button className="btn btn-sm btn-light dropdown-toggle" type="button" id="solve" data-bs-toggle="dropdown" aria-expanded="false">
+              Solve
+            </button>
+            <ul className="dropdown-menu" aria-labelledby="solve">
+              <li><button className="btn btn-link dropdown-item" onClick={this.solveLetter}>Letter</button></li>
+              <li><button className="btn btn-link dropdown-item" onClick={this.solveClue}>Clue</button></li>
+              <li><button className="btn btn-link dropdown-item" onClick={this.solvePuzzle}>Puzzle</button></li>
+            </ul>
+            <button className="btn btn-sm btn-danger dropdown-toggle" type="button" id="solve" data-bs-toggle="dropdown" aria-expanded="false">
+              Check
+            </button>
+            <ul className="dropdown-menu" aria-labelledby="solve">
+              <li><button className="btn btn-link dropdown-item" onClick={this.checkLetter}>Letter</button></li>
+              <li><button className="btn btn-link dropdown-item" onClick={this.checkClue}>Clue</button></li>
+              <li><button className="btn btn-link dropdown-item" onClick={this.checkPuzzle}>Puzzle</button></li>
+            </ul>
+          </div>
+        </div>
+        <div className="col-auto">
+          <table className="mt-3">
+            <tbody>
+              {body}
+            </tbody>
+          </table>
+        </div>
+        <div className="col-12 col-lg-4">
+        <h4 className="font-weight-bold">Across</h4>
           <ul className="list-unstyled">
             {across}
           </ul>
